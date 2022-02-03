@@ -139,7 +139,8 @@ cython_debug/
 
 .devcontainer/
 .dvc/
-dataset/
+data/dichalcogenides_public
+data/dichalcogenides_private
 **/*.json
 draw_dataset
 *.hdf5
