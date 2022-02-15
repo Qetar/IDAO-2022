@@ -22,6 +22,6 @@ def main(config):
     private_test[['predictions']].to_csv('./submission.csv', index_label='id')
 
 if __name__ == '__main__':
-    with open("config.json",'r') as f:
-        config = json.loads(f)
+    with open("config.json") as f:
+        config = json.loads(f.read())
     main(config)

@@ -25,8 +25,10 @@ parser.add_argument("--batch_size",type=int,default=128)
 parser.add_argument("--lr",type=float,default=2e-4)
 parser.add_argument("--cutoff",type=float,default=4.0)
 parser.add_argument("--nblocks",type=int,default=3)
+parser.add_argument("--npass",type=int,default=2)
 parser.add_argument("--width",type=int,default=0.8)
-parser.add_argument("--nfeat_bond",type=int,default=10) 
+parser.add_argument("--nfeat_bond",type=int,default=10)
+parser.add_argument("--embedding_dim",type=int,default=16)
 args = parser.parse_args()
 
 wandb.init(project="IDAO-2022", entity="asu-clowns")
@@ -40,6 +42,7 @@ model_checkpoint_callback = ModelCheckpoint(
     monitor="val_ewt",
     mode="max",
     save_best_only=True)
+
 
 def read_pymatgen_dict(file):
     with open(file, "r") as f:
@@ -85,9 +88,11 @@ def prepare_model(config):
         graph_converter=CrystalGraph(cutoff=r_cutoff),
         centers=gaussian_centers,
         width=gaussian_width,
+        nblocks=config["nblocks"],
         loss=["MAE"],
-        npass=2,
+        npass=config["npass"],
         lr=config["lr"],
+        embedding_dim=config["embedding_dim"],
         metrics=[ewt,tf.keras.metrics.MeanAbsoluteError()]
     )
 
