@@ -1,6 +1,7 @@
 import yaml
 import json
 import random
+import wandb
 
 import pandas as pd
 import numpy as np
