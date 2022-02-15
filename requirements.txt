@@ -6,3 +6,4 @@ tensorflow-gpu
 tensorboard
 ruamel.yaml
 pyyaml
+wandb
