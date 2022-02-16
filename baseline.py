@@ -98,6 +98,7 @@ def prepare_model(config):
     )
 
 def main(config):
+    seed_everything(config["seed"])
     train, test = prepare_dataset()
     model = prepare_model(config)
     model.train(
