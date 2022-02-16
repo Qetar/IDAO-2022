@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed",type=int,default=17)
 parser.add_argument("--epochs",type=int,default=800)
 parser.add_argument("--batch_size",type=int,default=128)
-parser.add_argument("--lr",type=float,default=2e-4)
+parser.add_argument("--lr",type=float,default=1e-3)
 parser.add_argument("--cutoff",type=float,default=4.0)
 parser.add_argument("--nblocks",type=int,default=3)
 parser.add_argument("--npass",type=int,default=2)
@@ -44,6 +44,7 @@ model_checkpoint_callback = ModelCheckpoint(
     mode="max",
     save_best_only=True)
 
+reduce_lr_callback  = ReduceLROnPlateau(monitor='val_ewt',mode="max", factor=0.2,patience=50, min_lr=0.0001)
 
 def read_pymatgen_dict(file):
     with open(file, "r") as f:
@@ -108,7 +109,7 @@ def main(config):
         validation_targets=test.targets,
         epochs=config["epochs"],
         batch_size=config["batch_size"],
-        callbacks=[model_checkpoint_callback,WandbCallback()],
+        callbacks=[model_checkpoint_callback,WandbCallback(),reduce_lr_callback],
         save_checkpoint=False,
     )
 
