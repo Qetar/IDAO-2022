@@ -44,7 +44,7 @@ model_checkpoint_callback = ModelCheckpoint(
     mode="max",
     save_best_only=True)
 
-reduce_lr_callback  = ReduceLROnPlateau(monitor='val_ewt',mode="max", factor=0.2,patience=50, min_lr=0.0001)
+reduce_lr_callback  = ReduceLROnPlateau(monitor="val_loss",mode="min", factor=0.2,patience=30, min_lr=0.0001)
 
 def read_pymatgen_dict(file):
     with open(file, "r") as f:
