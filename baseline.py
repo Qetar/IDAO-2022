@@ -9,21 +9,22 @@ import tensorflow as tf
 import argparse
 
 from pathlib import Path
-from pymatgen.core import Structure
 from sklearn.model_selection import train_test_split
 from megnet.models import MEGNetModel
 from megnet.data.crystal import CrystalGraph
 from wandb.keras import WandbCallback
-from tensorflow.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, LearningRateScheduler
 from tensorflow.keras.metrics import MeanAbsoluteError
+from utils import *
 
 train_datapath = "./data/dichalcogenides_public"
+additional_datapath = "./data/dichalcogenides_additional"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed",type=int,default=17)
 parser.add_argument("--epochs",type=int,default=800)
 parser.add_argument("--batch_size",type=int,default=128)
-parser.add_argument("--lr",type=float,default=1e-3)
+parser.add_argument("--lr",type=float,default=0.001)
 parser.add_argument("--cutoff",type=float,default=4.0)
 parser.add_argument("--nblocks",type=int,default=3)
 parser.add_argument("--npass",type=int,default=2)
@@ -44,17 +45,9 @@ model_checkpoint_callback = ModelCheckpoint(
     mode="max",
     save_best_only=True)
 
-reduce_lr_callback  = ReduceLROnPlateau(monitor="val_loss",mode="min", factor=0.2,patience=30, min_lr=0.0001)
+reduce_lr_callback  = ReduceLROnPlateau(monitor="val_loss",mode="min", factor=0.2,patience=30, min_lr=0.00001,verbose=1)
+scheduler_callback = LearningRateScheduler(scheduler,verbose=1)
 
-def read_pymatgen_dict(file):
-    with open(file, "r") as f:
-        d = json.load(f)
-    return Structure.from_dict(d)
-
-def seed_everything(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
 
 def ewt(prediction, target):
     # compute absolute error on energy per system.
@@ -67,13 +60,21 @@ def ewt(prediction, target):
     return success / tf.cast(total, tf.int64)
 
 def prepare_dataset():
-    dataset_path = Path(train_datapath)
-    targets = pd.read_csv(dataset_path / "targets.csv", index_col=0)
-    struct = {
-        item.name.strip(".json"): read_pymatgen_dict(item)
-        for item in (dataset_path / "structures").iterdir()
-    }
+    train_path = Path(train_datapath)
+    additional_path = Path(additional_datapath)
+    train_targets = pd.read_csv(train_path / "targets.csv", index_col=0)
+    additional_targets = pd.read_csv(additional_path / "targets.csv", index_col=0)
+    targets = pd.concat([train_targets,additional_targets],axis=0)
 
+    train_structs = {
+        item.name.strip(".json"): read_pymatgen_dict(item)
+        for item in (train_path / "structures").iterdir()
+    }
+    additional_structs ={
+        item.name.strip(".json"): read_pymatgen_dict(item)
+        for item in (additional_path / "structures").iterdir()
+    }
+    struct =  {**train_structs, **additional_structs}
     data = pd.DataFrame(columns=["structures"], index=struct.keys())
     data = data.assign(structures=struct.values(), targets=targets)
 
