@@ -45,7 +45,7 @@ model_checkpoint_callback = ModelCheckpoint(
     mode="max",
     save_best_only=True)
 
-reduce_lr_callback  = ReduceLROnPlateau(monitor="val_loss",mode="min", factor=0.2,patience=30, min_lr=0.00001,verbose=1)
+reduce_lr_callback  = ReduceLROnPlateau(monitor="val_loss",mode="min", factor=0.2,patience=50, min_lr=0.00001,verbose=1)
 scheduler_callback = LearningRateScheduler(scheduler,verbose=1)
 
 
