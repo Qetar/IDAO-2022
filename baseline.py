@@ -31,6 +31,9 @@ parser.add_argument("--npass",type=int,default=2)
 parser.add_argument("--width",type=float,default=0.8)
 parser.add_argument("--nfeat_bond",type=int,default=10)
 parser.add_argument("--embedding_dim",type=int,default=16)
+parser.add_argument("--additional_data",action="store_true")
+parser.add_argument("--test_size",type=float,default=0.25)
+
 args = parser.parse_args()
 
 wandb.init(project="IDAO-2022", entity="asu-clowns")
@@ -45,7 +48,7 @@ model_checkpoint_callback = ModelCheckpoint(
     mode="max",
     save_best_only=True)
 
-reduce_lr_callback  = ReduceLROnPlateau(monitor="val_loss",mode="min", factor=0.2,patience=50, min_lr=0.00001,verbose=1)
+reduce_lr_callback = ReduceLROnPlateau(monitor="val_loss",mode="min", factor=0.2,patience=50, min_lr=0.00001,verbose=1)
 scheduler_callback = LearningRateScheduler(scheduler,verbose=1)
 
 
@@ -59,26 +62,29 @@ def ewt(prediction, target):
     total = tf.size(target)
     return success / tf.cast(total, tf.int64)
 
-def prepare_dataset():
+def prepare_dataset(config):
     train_path = Path(train_datapath)
     additional_path = Path(additional_datapath)
-    train_targets = pd.read_csv(train_path / "targets.csv", index_col=0)
-    additional_targets = pd.read_csv(additional_path / "targets.csv", index_col=0)
-    targets = pd.concat([train_targets,additional_targets],axis=0)
+    targets = pd.read_csv(train_path / "targets.csv", index_col=0)
+    if config["additional_data"] == True:
+        additional_targets = pd.read_csv(additional_path / "targets.csv", index_col=0)
+        targets = pd.concat([targets,additional_targets],axis=0)
 
     train_structs = {
         item.name.strip(".json"): read_pymatgen_dict(item)
         for item in (train_path / "structures").iterdir()
     }
-    additional_structs ={
-        item.name.strip(".json"): read_pymatgen_dict(item)
-        for item in (additional_path / "structures").iterdir()
-    }
-    struct =  {**train_structs, **additional_structs}
+    if config["additional_data"] == True:
+        additional_structs ={
+            item.name.strip(".json"): read_pymatgen_dict(item)
+            for item in (additional_path / "structures").iterdir()
+        }
+
+    struct = train_structs if not config["additional_data"] else {**train_structs, **additional_structs}
     data = pd.DataFrame(columns=["structures"], index=struct.keys())
     data = data.assign(structures=struct.values(), targets=targets)
 
-    return train_test_split(data, test_size=0.25)
+    return train_test_split(data, test_size=config["test_size"])
 
  
 def prepare_model(config):
@@ -101,7 +107,7 @@ def prepare_model(config):
 
 def main(config):
     seed_everything(config["seed"])
-    train, test = prepare_dataset()
+    train, test = prepare_dataset(config)
     model = prepare_model(config)
     model.train(
         train.structures,
